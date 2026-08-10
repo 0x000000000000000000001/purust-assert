@@ -1,0 +1,9 @@
+package:
+  dependencies:
+    - console
+    - effect
+    - prelude
+  name: assert
+workspace:
+  packageSet:
+    registry: 73.3.0
