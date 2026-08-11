@@ -1,13 +1,15 @@
-pub fn Test_Assert_assertImpl(message: crate::UnknownType, success: crate::UnknownType) -> crate::UnknownType {
-    crate::UnknownType::new(std::rc::Rc::new(move |_: crate::UnknownType| -> crate::UnknownType {
-        // Mock assert
-        crate::UnknownType::new(0)
-    }))
+pub fn Test_Assert_assertImpl() -> crate::UnknownType {
+    crate::UnknownType::new(crate::Record_a { call: Some(std::rc::Rc::new(move |_message: crate::UnknownType| -> crate::UnknownType {
+        crate::UnknownType::new(crate::Record_a { call: Some(std::rc::Rc::new(move |_success: crate::UnknownType| -> crate::UnknownType {
+            // Mock assert
+            crate::UnknownType::new(crate::Record_a { ..Default::default() })
+        })), ..Default::default() })
+    })), ..Default::default() })
 }
 
-pub fn Test_Assert_checkThrows(f: crate::UnknownType) -> crate::UnknownType {
-    crate::UnknownType::new(std::rc::Rc::new(move |_: crate::UnknownType| -> crate::UnknownType {
-        // Mock checkThrows (returns true for now)
-        crate::UnknownType::new(true)
-    }))
+pub fn Test_Assert_checkThrows() -> crate::UnknownType {
+    crate::UnknownType::new(crate::Record_a { call: Some(std::rc::Rc::new(move |_f: crate::UnknownType| -> crate::UnknownType {
+        // Mock checkThrows (returns true for now, but boolean in purust is true=Record_a)
+        crate::UnknownType::new(crate::Record_a { bool_val: Some(true), ..Default::default() })
+    })), ..Default::default() })
 }
