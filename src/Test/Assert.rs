@@ -10,6 +10,6 @@ pub fn Test_Assert_assertImpl() -> crate::UnknownType {
 pub fn Test_Assert_checkThrows() -> crate::UnknownType {
     crate::UnknownType::new(crate::Record_a { call: Some(std::rc::Rc::new(move |_f: crate::UnknownType| -> crate::UnknownType {
         // Mock checkThrows (returns true for now, but boolean in purust is true=Record_a)
-        crate::UnknownType::new(crate::Record_a { bool_val: Some(true), ..Default::default() })
+        crate::UnknownType::new(crate::Record_a { init_bool: Some(true), ..Default::default() })
     })), ..Default::default() })
 }
