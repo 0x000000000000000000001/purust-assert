@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+CLEAN=0
+for arg in "$@"; do
+  case "$arg" in
+    -c|--clean) CLEAN=1 ;;
+    *) echo "Usage: bin/test [-c|--clean]" >&2; exit 2 ;;
+  esac
+done
+
+COMPILER_DIR="$(cd ../purust && pwd)"
+if [ "$CLEAN" = 1 ]; then
+  echo "=== Recompiling purust ==="
+  (cd "$COMPILER_DIR" && npm run build)
+fi
+
+# Prefer the sibling TAST fork; PURS can select another build explicitly.
+if [ -n "${PURS:-}" ]; then
+  PURS_BIN="$(command -v "$PURS")"
+else
+  FORK_BUILDS=("$COMPILER_DIR"/../../purescript/.stack-work/dist/*/*/build/purs/purs)
+  if [ "${#FORK_BUILDS[@]}" = 1 ] && [ -x "${FORK_BUILDS[0]}" ]; then
+    PURS_BIN="${FORK_BUILDS[0]}"
+  else
+    PURS_BIN="$(command -v purs)"
+  fi
+fi
+export PATH="$(dirname "$PURS_BIN"):$PATH"
+
+# Clean this package only. Always regenerate its TAST and Rust output.
+rm -rf output
+if [ "$CLEAN" = 1 ]; then
+  rm -rf .spago .cache
+fi
+
+echo "=== Building TAST and generating Rust with spago ==="
+spago build
+node -e 'const fs = require("node:fs"); const m = JSON.parse(fs.readFileSync("output/Test.Main/corefn.json", "utf8")); if (!Array.isArray(m.dataDecls)) { console.error("A TAST-enabled PureScript fork is required; set PURS to its executable."); process.exit(1); }'
+
+echo "=== Compiling Rust FFI and tests ==="
+cargo build --manifest-path output/purust_output/Cargo.toml
+
+echo "=== Running positive and expected-failure cases ==="
+BINARY="output/purust_output/target/debug/purust_output"
+PASSED=0
+
+run_case() {
+  local name="$1" scenario="$2" expected_status="$3"
+  shift 3
+  local output status message
+  if output=$("$BINARY" "$scenario" 2>&1); then
+    status=0
+  else
+    status=$?
+  fi
+  if [ "$status" -ne "$expected_status" ]; then
+    printf '[FAILED] %s: expected exit %s, got %s\n%s\n' "$name" "$expected_status" "$status" "$output" >&2
+    exit 1
+  fi
+  for message in "$@"; do
+    if [[ "$output" != *"$message"* ]]; then
+      printf '[FAILED] %s: missing message %s\n%s\n' "$name" "$message" "$output" >&2
+      exit 1
+    fi
+  done
+  printf '[OK] %s\n' "$name"
+  PASSED=$((PASSED + 1))
+}
+
+# Rust panics exit with 101. Signals and the fixture's timeout must fail the runner.
+run_case 'positive assertions, deferred effects and replay' 0 0 'assert: positive cases and deferred replay passed'
+run_case 'assert false' 1 101 'Assertion failed'
+run_case 'assert custom message' 2 101 'custom assertion failure'
+run_case 'assertTrue false' 3 101 'Expected: true' 'Actual:   false'
+run_case 'assertFalse true' 4 101 'Expected: false' 'Actual:   true'
+run_case 'assertEqual different integers' 5 101 'Expected: 2' 'Actual:   1'
+run_case 'assertEqual custom message' 6 101 'custom equality failure' 'Expected:' 'expected' 'Actual:' 'actual'
+run_case 'assertThrows without exception' 7 101 'Assertion failed: An error should have been thrown'
+run_case 'assertThrows custom message' 8 101 'custom missing exception'
+run_case 'assertTrue custom message' 9 101 'custom true failure' 'Expected: true' 'Actual:   false'
+run_case 'assertFalse custom message' 10 101 'custom false failure' 'Expected: false' 'Actual:   true'
+printf 'Summary: %s scenarios passed (including 10 expected process failures).\n' "$PASSED"

@@ -4,6 +4,19 @@ package:
     - effect
     - prelude
   name: assert
+  test:
+    main: Test.Main
+    dependencies: []
 workspace:
+  backend:
+    cmd: ../purust/bin/purust
+    args: [--main, Test.Main, --source, output, --out, output/purust_output]
   packageSet:
     registry: 73.3.0
+  extraPackages:
+    console:
+      path: ../purust-console
+    effect:
+      path: ../purust-effect
+    prelude:
+      path: ../purust-prelude
